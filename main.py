@@ -17,6 +17,13 @@ def parse_args():
     parser.add_argument("--output-dir", default="outputs", help="Directory for generated results.")
     parser.add_argument("--clusters", type=int, default=4, help="Number of clusters for both algorithms.")
     parser.add_argument(
+        "--sample-size",
+        type=int,
+        default=5000,
+        help="Number of customers sampled for both algorithms (default: 5000). Use 0 for all customers.",
+    )
+    parser.add_argument("--random-state", type=int, default=42, help="Random seed for reproducible sampling.")
+    parser.add_argument(
         "--linkage",
         choices=["ward", "complete", "average", "single"],
         default="ward",
@@ -34,14 +41,26 @@ def main():
     rfm = build_rfm(orders, customers, payments)
     rfm.to_csv(output_dir / "rfm_customers.csv", index=False)
 
-    scaled_features, _ = prepare_features(rfm)
+    # Agglomerative clustering has quadratic memory/time behavior on common implementations.
+    # Both algorithms therefore receive the exact same reproducible customer sample.
+    if args.sample_size < 0:
+        raise ValueError("--sample-size must be 0 or a positive integer.")
+    if args.sample_size and args.sample_size < len(rfm):
+        experiment_rfm = rfm.sample(n=args.sample_size, random_state=args.random_state).reset_index(drop=True)
+    else:
+        experiment_rfm = rfm.copy().reset_index(drop=True)
+
+    if args.clusters < 2 or args.clusters >= len(experiment_rfm):
+        raise ValueError("--clusters must be at least 2 and smaller than the experiment sample size.")
+
+    scaled_features, _ = prepare_features(experiment_rfm)
     kmeans_labels, hierarchical_labels, kmeans_time, hierarchical_time = run_clustering(
         scaled_features,
         n_clusters=args.clusters,
         linkage=args.linkage,
     )
 
-    segments = rfm.copy()
+    segments = experiment_rfm.copy()
     segments["kmeans_cluster"] = kmeans_labels
     segments["hierarchical_cluster"] = hierarchical_labels
     segments.to_csv(output_dir / "customer_segments.csv", index=False)
@@ -67,7 +86,8 @@ def main():
         output_dir / "hierarchical_clusters.png",
     )
 
-    print("\nRFM dataset created:", len(rfm), "customers")
+    print(f"RFM dataset created: {len(rfm):,} customers")
+    print(f"Customers used in both clustering experiments: {len(experiment_rfm):,}")
     print("\nClustering evaluation:")
     print(metrics.to_string(index=False))
     print("\nResults saved to:", output_dir.resolve())
