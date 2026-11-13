@@ -56,15 +56,18 @@ pip install -r requirements.txt
 From the repository root:
 
 ```bash
-python main.py --data-dir data/raw --output-dir outputs --clusters 4
+python main.py --data-dir data/raw --output-dir outputs --clusters 4 --sample-size 5000
 ```
 
 Optional arguments:
 
 - `--clusters`: number of clusters used by both algorithms (default: 4)
+- `--sample-size`: reproducible number of customers used by both algorithms (default: 5,000); use `0` for all customers
 - `--linkage`: hierarchical linkage method: `ward`, `complete`, `average`, or `single` (default: `ward`)
 
 ## Outputs
+
+Agglomerative clustering can require quadratic memory/time as the number of customers grows. For that reason, the default experiment draws one reproducible sample of 5,000 customers and runs **both** algorithms on that exact same sample. The full RFM table is still saved. The segment and metric outputs describe the experiment sample, not every customer. You can change the sample size or use `--sample-size 0` only if your machine can handle it. Report the sample size and random seed in the thesis.
 
 The run creates:
 
