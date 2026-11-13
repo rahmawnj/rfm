@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.pytest_cache/
+
+# Dataset files
+data/raw/*
+!data/raw/.gitkeep
+
+# Generated experiment outputs
+outputs/*
+!outputs/.gitkeep
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
